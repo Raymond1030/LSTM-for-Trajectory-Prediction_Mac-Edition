@@ -12,6 +12,7 @@ else:
     device = torch.device("cpu")
 print("Device:"+str(device))
 # Create a tensor and move it to the MPS device
-# 创建张量并移动到MPS设备  
-x = torch.randn(3, 3).to(device)
+# 创建张量并移动到MPS设备 
+x=torch.tensor([[1,2,3],[4,5,8],[9,8,7]]).to(device)
+# x = torch.randn(3, 3).to(device)
 print(x)
