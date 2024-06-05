@@ -17,14 +17,16 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 import torch.distributions as dist
 from dataPrepare import *
-# from newDataPrepare import *
+
 
 torch.manual_seed(0)
 
 MAX_LENGTH = 100
+# Check if MPS is available
 # 检查是否可以使用Metal加速
 print(torch.backends.mps.is_available())
 
+# Check if MPS backend is available
 # 检查MPS后端是否可用
 if torch.backends.mps.is_available():
     device = torch.device("mps")
@@ -117,17 +119,12 @@ def trainIters(encoder, n_iters, print_every=1000, plot_every=1, learning_rate=0
     return plot_losses
 
 def Eval_net(encoder):
-    # with torch.no_grad():
-    #     encoder.eval()
-    #     for local_batch, local_labels in Test:
-    #         local_batch, local_labels = local_batch.to(device).float(), local_labels.to(device).float()
-    #         output = encoder(local_batch)
+  
     count = 0
     for local_batch, local_labels in Training_generator:
         if local_batch.shape[0]!=BatchSize:
             continue
         count = count + 1
-        # local_batch, local_labels = local_batch.to(device).float(), local_labels.to(device).float()
         local_batch = local_batch.to(device).float()
         local_labels = local_labels.to(device).float()
         predY = encoder(local_batch)
@@ -201,7 +198,7 @@ def showPlot(points):
 
 train_iter = iter(Training_generator)
 print(train_iter)
-# x,y=train_iter.next() 版本问题
+# x,y=train_iter.next() Python版本问题  Python Edition Problem
 x, y = next(train_iter)
 print(x.shape)
 hidden_size = 256
@@ -220,7 +217,7 @@ if TRAN_TAG:
     showPlot(plot_losses)
 else:
     Prednet.load_state_dict(torch.load('checkpoint.pth.tar'))
-    # Prednet = Prednet.double()
+    # Prednet = Prednet.double() # Raw Code
     Prednet = Prednet.to(device).float()
     Prednet.eval()
     Eval_net(Prednet)
