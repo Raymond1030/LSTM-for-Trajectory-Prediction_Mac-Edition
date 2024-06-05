@@ -16,6 +16,7 @@ plt.switch_backend('TkAgg')
 import matplotlib.ticker as ticker
 import numpy as np
 BatchSize = 128
+torch.set_default_dtype(torch.float32)
 class TrajectoryDataset(Dataset):
     """Face Landmarks dataset."""
     
@@ -27,7 +28,7 @@ class TrajectoryDataset(Dataset):
             transform (callable, optional): Optional transform to be applied
             on a sample.
             """
-        self.csv_file = csv_file;
+        self.csv_file = csv_file
         # store X as a list, each element is a 100*42(len * attributes num) np array [velx;vely;x;y;acc;angle] * 7
         self.X_frames = []
         # store Y as a list, each element is a 100*4(len * attributes num) np array[velx;vely;x;y]
@@ -79,15 +80,15 @@ class TrajectoryDataset(Dataset):
                 plt.subplot(2,3,2)
                 plt.plot(frame[1:,1+i*4],'ro')
                 '''
-                x_vel = (frame[1:,0+i*4] -  frame[:-1, 0+i*4])/0.1;
-                v_avg = (x_vel[1:] +x_vel[:-1])/2.0;
-                v1 = [2.0*x_vel[0]- v_avg[0]];v_end = [2.0*x_vel[-1]- v_avg[-1]];
+                x_vel = (frame[1:,0+i*4] -  frame[:-1, 0+i*4])/0.1
+                v_avg = (x_vel[1:] +x_vel[:-1])/2.0
+                v1 = [2.0*x_vel[0]- v_avg[0]];v_end = [2.0*x_vel[-1]- v_avg[-1]]
                 vel = (v1+ v_avg.tolist()+v_end)
                 vel = np.array(vel)
                 
-                y_vel = (frame[1:,1+i*4] -  frame[:-1, 1+i*4])/0.1;
-                vy_avg = (y_vel[1:] +y_vel[:-1])/2.0;
-                vy1 = [2.0*y_vel[0]- vy_avg[0]];vy_end = [2.0*y_vel[-1]- vy_avg[-1]];
+                y_vel = (frame[1:,1+i*4] -  frame[:-1, 1+i*4])/0.1
+                vy_avg = (y_vel[1:] +y_vel[:-1])/2.0
+                vy1 = [2.0*y_vel[0]- vy_avg[0]];vy_end = [2.0*y_vel[-1]- vy_avg[-1]]
                 vely = (vy1+ vy_avg.tolist()+ vy_end)
                 vely = np.array(vely)
                 '''
@@ -121,7 +122,7 @@ class TrajectoryDataset(Dataset):
             for i in range(X.shape[0]-100):
                 if random.random()>0.2:
                     continue
-                j = i-1;
+                j = i-1
                 if count>20:
                     break
                 #print('X[] shape',X[i:i+100,:].shape)
@@ -130,17 +131,18 @@ class TrajectoryDataset(Dataset):
                 count = count+1
     def normalize_data(self):
         A = [list(x) for x in zip(*(self.X_frames))]
-        A = torch.tensor(A)
+        A = torch.tensor(A,dtype=torch.float32)  # Ensure float32
         A = A.view(-1,A.shape[2])
         print('A:',A.shape)
         self.mn = torch.mean(A,dim=0)
         self.range = (torch.max(A,dim=0).values-torch.min(A,dim=0).values)/2.0
-        self.range = torch.ones(self.range.shape,dtype = torch.double)
+        # self.range = torch.ones(self.range.shape,dtype = torch.double)
+        self.range=torch.ones(self.range.shape,dtype = torch.float32)
         self.std = torch.std(A,dim=0)
         #self.X_frames = [torch.tensor(item) for item in self.X_frames]
         #self.Y_frames = [torch.tensor(item) for item in self.Y_frames]
-        self.X_frames = [(torch.tensor(item)-self.mn)/(self.std*self.range) for item in self.X_frames]
-        self.Y_frames = [(torch.tensor(item)-self.mn[:4])/(self.std[:4]*self.range[:4]) for item in self.Y_frames]
+        self.X_frames = [(torch.tensor(item,dtype=torch.float32)-self.mn)/(self.std*self.range) for item in self.X_frames]
+        self.Y_frames = [(torch.tensor(item,dtype=torch.float32)-self.mn[:4])/(self.std[:4]*self.range[:4]) for item in self.Y_frames]
 
 def get_dataloader():
     '''

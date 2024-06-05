@@ -17,13 +17,24 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 import torch.distributions as dist
 from dataPrepare import *
+# from newDataPrepare import *
 
 torch.manual_seed(0)
 
 MAX_LENGTH = 100
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-if torch.cuda.is_available():
-    print('ok')
+# 检查是否可以使用Metal加速
+print(torch.backends.mps.is_available())
+
+# 检查MPS后端是否可用
+if torch.backends.mps.is_available():
+    device = torch.device("mps")
+else:
+    device = torch.device("cpu")
+torch.set_default_dtype(torch.float32)
+# CUDA for PyTorch
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# if torch.cuda.is_available():
+#     print('ok')
 Training_generator, Test, Valid, WholeSet= get_dataloader()
 
 
@@ -106,13 +117,19 @@ def trainIters(encoder, n_iters, print_every=1000, plot_every=1, learning_rate=0
     return plot_losses
 
 def Eval_net(encoder):
+    # with torch.no_grad():
+    #     encoder.eval()
+    #     for local_batch, local_labels in Test:
+    #         local_batch, local_labels = local_batch.to(device).float(), local_labels.to(device).float()
+    #         output = encoder(local_batch)
     count = 0
     for local_batch, local_labels in Training_generator:
         if local_batch.shape[0]!=BatchSize:
             continue
         count = count + 1
-        local_batch = local_batch.to(device)
-        local_labels = local_labels.to(device)
+        # local_batch, local_labels = local_batch.to(device).float(), local_labels.to(device).float()
+        local_batch = local_batch.to(device).float()
+        local_labels = local_labels.to(device).float()
         predY = encoder(local_batch)
         print(WholeSet.std.repeat(BatchSize,100,1).shape)
         std = WholeSet.std.repeat(BatchSize,100,1)
@@ -176,31 +193,34 @@ def showPlot(points):
     plt.figure()
     fig, ax = plt.subplots()
     # this locator puts ticks at regular intervals
-    loc = ticker.MultipleLocator(base=0.2)
-    ax.yaxis.set_major_locator(loc)
+    # loc = ticker.MultipleLocator(base=0.2)
+    # loc = ticker.MultipleLocator(base=100)
+    # ax.yaxis.set_major_locator(loc)
     plt.plot(points)
     plt.show()
 
 train_iter = iter(Training_generator)
-x, y = train_iter.next()
+print(train_iter)
+# x,y=train_iter.next() 版本问题
+x, y = next(train_iter)
 print(x.shape)
 hidden_size = 256
 Prednet = NNPred(x.shape[2], y.shape[2],hidden_size, BatchSize)
 
 print(device)
 
-TRAN_TAG = False
+TRAN_TAG = True
 if TRAN_TAG:
     if path.exists("checkpoint.pth.tar"):
         Prednet.load_state_dict(torch.load('checkpoint.pth.tar'))
-    Prednet = Prednet.double()
-    Prednet = Prednet.to(device)
+    Prednet = Prednet
+    Prednet = Prednet.to(device).float()
     plot_losses = trainIters(Prednet, 30, print_every=2)
     torch.save(Prednet.state_dict(), 'checkpoint.pth.tar')
     showPlot(plot_losses)
 else:
     Prednet.load_state_dict(torch.load('checkpoint.pth.tar'))
-    Prednet = Prednet.double()
-    Prednet = Prednet.to(device)
+    # Prednet = Prednet.double()
+    Prednet = Prednet.to(device).float()
     Prednet.eval()
     Eval_net(Prednet)
