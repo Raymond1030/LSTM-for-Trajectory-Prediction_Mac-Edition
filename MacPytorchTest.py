@@ -10,7 +10,7 @@ if torch.backends.mps.is_available():
     device = torch.device("mps")
 else:
     device = torch.device("cpu")
-
+print("Device:"+str(device))
 # Create a tensor and move it to the MPS device
 # 创建张量并移动到MPS设备  
 x = torch.randn(3, 3).to(device)
