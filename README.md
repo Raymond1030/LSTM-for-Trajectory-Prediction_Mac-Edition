@@ -83,6 +83,6 @@ python LSTM.py
 
 You can change the TRAN_TAG depend on whether you have train the model.
 
-## LICENSE
+## License
 
 MIT
